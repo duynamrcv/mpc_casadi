@@ -1,0 +1,12 @@
+<launch>
+    <rosparam file="$(find mpc_casadi)/params/vast_constraints.yaml" command="load" />
+
+    <!-- Load Vast Fake robot -->
+    <include file="$(find vast_fake)/launch/vast_fake.launch" />
+
+    <!-- Trajectory -->
+    <node pkg="mpc_casadi" type="trajectory.py" name="trajectory" output="screen"/>
+
+    <!-- Controller -->
+    <node pkg="mpc_casadi" type="nmpc_node.py" name="nmpc_node" output="screen" />
+</launch>

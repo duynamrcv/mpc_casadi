@@ -1,0 +1,7 @@
+RobotConstraints:
+  min_vx: -1.0
+  max_vx: 1.0
+  min_vy: -1.0
+  max_vy: 1.0
+  min_omega: -0.7854
+  max_omega: 0.7854
