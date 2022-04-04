@@ -1,0 +1,20 @@
+<launch>
+    <rosparam file="$(find mpc_casadi)/params/vast_constraints.yaml" command="load" />
+
+    <!-- load VAST robot in Gazebo -->
+    <include file="$(find vast_gazebo)/launch/robot.launch" />
+    <node pkg="vast_fake" name="odom_path_node" type="odom_path_node">
+        <param name="length_path"       type="int"      value="-1" />
+    </node>
+
+    <!-- Controller -->
+    <node pkg="mpc_casadi" type="nmpc_nav_node.py" name="nmpc_node" output="screen" >
+        <param name="path_topic"  type="string"   value="/move_base/TrajectoryPlannerROS/local_plan" />
+    </node>
+
+    <!-- Navigation -->
+    <include file="$(find vast_navigation)/launch/vast_navigation.launch"/>
+
+    <!-- Plotting -->
+    <!-- <node pkg="mpc_casadi" type="plot_navigation.py" name="plotting" output="screen" /> -->
+</launch>

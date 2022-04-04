@@ -63,7 +63,7 @@ def quaternion2Yaw(orientation):
 
 #     return x_, u_
 
-def desired_trajectory(pos, N:int, path:Path, count:int):
+def desired_trajectory(pos, N:int, path:Path):
     # initial state
     x_ = np.zeros((N+1, 3))
 
@@ -80,9 +80,9 @@ def desired_trajectory(pos, N:int, path:Path, count:int):
     y_ref = traj[:,1]
     q_ref = traj[:,2]
 
-    x_ref_ = x_ref[count:(count+N)]
-    y_ref_ = y_ref[count:(count+N)]
-    q_ref_ = q_ref[count:(count+N)]
+    x_ref_ = x_ref[:N]
+    y_ref_ = y_ref[:N]
+    q_ref_ = q_ref[:N]
     length = len(x_ref_)
 
     if length < N:
@@ -140,15 +140,8 @@ def nmpc_node():
         continue
     print("[INFO] NMPC Node is ready!!!")
 
-    print("[INFO] Wait 10s ...")    
-    st = time.time()
-    while time.time() - st < 10:
-        r.sleep()
-        continue
-    print("[INFO] Start NMPC simulation!!!")
-
     T = 1/rate
-    N = 10      # Predict horizon
+    N = 20
 
     min_vx = rospy.get_param('/RobotConstraints/min_vx')
     max_vx = rospy.get_param('/RobotConstraints/max_vx')
@@ -165,55 +158,43 @@ def nmpc_node():
 
     nmpc = NMPCController(pos, min_vx, max_vx, min_vy, max_vy, min_omega, max_omega, T, N) 
     t0 = 0
-    count = 0
     while not rospy.is_shutdown():
-        if count >= len(path.poses):
-            # Publish cmd_vel
-            vel_msg = Twist()
-            vel_msg.linear.x = 0.0
-            vel_msg.linear.y = 0.0
-            vel_msg.angular.z = 0.0
-            pub_vel.publish(vel_msg)
-        else:
-            # Current position
-            px = odom.pose.pose.position.x
-            py = odom.pose.pose.position.y
-            pq = quaternion2Yaw(odom.pose.pose.orientation)
-            pos = np.array([px, py, pq])
+        # Current position
+        px = odom.pose.pose.position.x
+        py = odom.pose.pose.position.y
+        pq = quaternion2Yaw(odom.pose.pose.orientation)
+        pos = np.array([px, py, pq])
 
-            next_traj, next_cons = desired_trajectory(pos, N, path, count)
-            next_traj = correct_state(nmpc.next_states, next_traj)
-            st = time.time()
-            vel = nmpc.solve(next_traj, next_cons)
-            print("Processing time: {:.2f}s".format(time.time()-st))
-            # Publish cmd_vel
-            vel_msg = Twist()
-            vel_msg.linear.x = vel[0]
-            vel_msg.linear.y = vel[1]
-            vel_msg.angular.z = vel[2]
-            pub_vel.publish(vel_msg)
+        next_traj, next_cons = desired_trajectory(pos, N, path)
+        next_traj = correct_state(nmpc.next_states, next_traj)
+        vel = nmpc.solve(next_traj, next_cons)
+
+        # Publish cmd_vel
+        vel_msg = Twist()
+        vel_msg.linear.x = vel[0]
+        vel_msg.linear.y = vel[1]
+        vel_msg.angular.z = vel[2]
+        pub_vel.publish(vel_msg)
 
 
-            # Publish the predict path
-            predict = nmpc.next_states
-            predict_msg = Path()
-            predict_msg.header.frame_id = "odom"
-            predict_msg.header.stamp = rospy.Time.now()
-            for pos in predict:
-                pose = PoseStamped()
-                pose.header = predict_msg.header
-                pose.pose.position.x = pos[0]
-                pose.pose.position.y = pos[1]
-                quat = quaternion_from_euler(0, 0, pos[2])
-                pose.pose.orientation.x = quat[0]
-                pose.pose.orientation.y = quat[1]
-                pose.pose.orientation.z = quat[2]
-                pose.pose.orientation.w = quat[3]
+        # Publish the predict path
+        predict = nmpc.next_states
+        predict_msg = Path()
+        predict_msg.header.frame_id = "odom"
+        predict_msg.header.stamp = rospy.Time.now()
+        for pos in predict:
+            pose = PoseStamped()
+            pose.header = predict_msg.header
+            pose.pose.position.x = pos[0]
+            pose.pose.position.y = pos[1]
+            quat = quaternion_from_euler(0, 0, pos[2])
+            pose.pose.orientation.x = quat[0]
+            pose.pose.orientation.y = quat[1]
+            pose.pose.orientation.z = quat[2]
+            pose.pose.orientation.w = quat[3]
 
-                predict_msg.poses.append(pose)
-            pub_pre_path.publish(predict_msg)
-
-            count += 1
+            predict_msg.poses.append(pose)
+        pub_pre_path.publish(predict_msg)
 
         r.sleep()
         t0 += T

@@ -17,9 +17,11 @@ include_directories(${catkin_INCLUDE_DIRS})
 catkin_install_python(PROGRAMS
   src/trajectory.py
   src/nmpc_node.py
-  # src/lnmpc_node.py
+  src/nmpc_nav_node.py
 
   test/test_nmpc.py
-  # test/test_lnmpc.py
+
+  plotting/plot_tracking.py
+  plotting/plot_navigation.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

@@ -4,9 +4,20 @@
     <!-- Load Vast Fake robot -->
     <include file="$(find vast_fake)/launch/vast_fake.launch" />
 
+    <!-- load VAST robot in Gazebo -->
+    <!-- <include file="$(find vast_gazebo)/launch/robot.launch" />
+    <node pkg="vast_fake" name="odom_path_node" type="odom_path_node">
+        <param name="length_path"       type="int"      value="-1" />
+    </node> -->
+
     <!-- Trajectory -->
     <node pkg="mpc_casadi" type="trajectory.py" name="trajectory" output="screen"/>
 
     <!-- Controller -->
-    <node pkg="mpc_casadi" type="nmpc_node.py" name="nmpc_node" output="screen" />
+    <node pkg="mpc_casadi" type="nmpc_node.py" name="nmpc_node" output="screen" >
+        <param name="path_topic"  type="string"   value="/path" />
+    </node>
+
+    <!-- Plotting -->
+    <node pkg="mpc_casadi" type="plot_tracking.py" name="plotting" output="screen" />
 </launch>
